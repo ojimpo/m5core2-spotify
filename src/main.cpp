@@ -25,8 +25,12 @@ unsigned long lastUpdate = 0;
 const unsigned long UPDATE_INTERVAL = 3000; // 3 seconds
 
 // State vars
-String g_Title, g_Artist, g_Album, g_ArtUrl;
+// State vars
+String g_Title, g_Artist, g_Album, g_ArtUrl, g_TrackId;
+String g_LastTrackId = "";
 bool g_IsPlaying = false;
+bool g_IsLiked = false;
+bool g_LikeCheckNeeded = false;
 int g_Progress = 0;
 int g_Duration = 0;
 
@@ -73,6 +77,8 @@ void handleTouch() {
 
     // Only handle touch within the screen area (exclude physical button area
     // below screen)
+    // Only handle touch within the screen area (exclude physical button area
+    // below screen)
     if (y > 180 && y < 240) { // Bottom area on screen
       if (x < 110) {
         spotifyClient.previous();
@@ -89,6 +95,19 @@ void handleTouch() {
       } else if (x > 210) {
         spotifyClient.next();
       }
+    } else if (x < 180 && y < 180) {
+      // Like Button Area (Entire Artwork 180x180)
+
+      if (g_IsLiked) {
+        if (spotifyClient.unlikeTrack(g_TrackId.c_str())) {
+          g_IsLiked = false;
+        }
+      } else {
+        if (spotifyClient.likeTrack(g_TrackId.c_str())) {
+          g_IsLiked = true;
+        }
+      }
+      displayMsg.updateControlState(false, "off", g_IsLiked);
     }
   }
 }
@@ -123,13 +142,36 @@ void loop() {
     lastUpdate = millis();
 
     // Fetch Data
-    int status =
-        spotifyClient.getNowPlaying(g_Title, g_Artist, g_Album, g_ArtUrl,
-                                    g_IsPlaying, g_Progress, g_Duration);
+    // Fetch Data
+    int status = spotifyClient.getNowPlaying(g_Title, g_Artist, g_Album,
+                                             g_ArtUrl, g_TrackId, g_IsPlaying,
+                                             g_Progress, g_Duration);
 
     if (status == 200) {
+      if (g_TrackId != g_LastTrackId) {
+        // Track Changed
+        g_LastTrackId = g_TrackId;
+        g_LikeCheckNeeded = true;
+        // Reset Like State visually until checked
+        g_IsLiked = false;
+      }
+
+      // Perform Like Check if needed
+      if (g_LikeCheckNeeded) {
+        bool likedState = false;
+        if (spotifyClient.getLikeState(g_TrackId.c_str(), likedState)) {
+          g_IsLiked = likedState;
+          g_LikeCheckNeeded = false; // Check complete
+        } else {
+          // API Failed (e.g. rate limit, network).
+          // Keep g_LikeCheckNeeded = true to retry next loop.
+        }
+      }
+
       displayMsg.updateNowPlaying(g_Title, g_Artist, g_Album, g_ArtUrl);
       displayMsg.updatePlaybackState(g_IsPlaying, g_Progress, g_Duration);
+      displayMsg.updateControlState(false, "off",
+                                    g_IsLiked); // Ensure button redraw
     } else {
       // Debug
       Serial.printf("Status: %d\n", status);

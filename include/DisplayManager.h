@@ -22,10 +22,12 @@ private:
   String _lastTitle;
   String _lastArtist;
   bool _lastIsPlaying;
+  bool _lastIsLiked;
 
   void drawAlbumArt(String url);
   void drawTextInfo(String title, String artist);
   void drawControls(bool isPlaying);
+  void drawLikeButton(bool isLiked);
 
   // Helpers
   void drawButton(int x, int y, int w, int h, const char *label, uint16_t color,

@@ -75,6 +75,54 @@ void DisplayManager::updatePlaybackState(bool isPlaying, int progress,
   M5.Display.fillRect(0, barY, fillW, barHeight, SPOTIFY_GREEN);
 }
 
+void DisplayManager::drawLikeButton(bool isLiked) {
+  // Region: Overlay on Artwork (Bottom-Right)
+  // Artwork is 180x180 at (0,0).
+  // Center X = 180 - 13 - 8 = 159 (give some margin from edge)
+  // Center Y = 180 - 13 - 8 = 159.
+
+  int r = 13;
+  int cx = 159;
+  int cy = 159;
+
+  // Draw Black Background Circle (Badge style)
+  // Radius + padding (User requested slightly larger border)
+  M5.Display.fillCircle(cx, cy, r + 4, TFT_BLACK);
+
+  if (isLiked) {
+    // Green Filled Circle
+    M5.Display.fillCircle(cx, cy, r, SPOTIFY_GREEN);
+
+    // Black Checkmark
+    M5.Display.setColor(TFT_BLACK);
+
+    int x1 = cx - 4;
+    int y1 = cy;
+    int x2 = cx - 1;
+    int y2 = cy + 4;
+    int x3 = cx + 5;
+    int y3 = cy - 4;
+
+    for (int i = 0; i < 2; i++) {
+      M5.Display.drawLine(x1, y1 + i, x2, y2 + i, TFT_BLACK);
+      M5.Display.drawLine(x1 + 1, y1 + i, x2 + 1, y2 + i, TFT_BLACK);
+
+      M5.Display.drawLine(x2, y2 + i, x3, y3 + i, TFT_BLACK);
+      M5.Display.drawLine(x2 + 1, y2 + i, x3 + 1, y3 + i, TFT_BLACK);
+    }
+    M5.Display.fillCircle(x2, y2, 1, TFT_BLACK);
+
+  } else {
+    // White Outline Circle + Plus
+    M5.Display.drawCircle(cx, cy, r, TFT_WHITE);
+    M5.Display.drawCircle(cx, cy, r - 1, TFT_WHITE);
+
+    int s = 5;
+    M5.Display.fillRect(cx - s, cy - 1, s * 2 + 1, 3, TFT_WHITE); // Horz
+    M5.Display.fillRect(cx - 1, cy - s, 3, s * 2 + 1, TFT_WHITE); // Vert
+  }
+}
+
 void DisplayManager::drawAlbumArt(String url) {
   HTTPClient http;
   http.begin(url);
@@ -265,4 +313,8 @@ void DisplayManager::drawButton(int x, int y, int w, int h, const char *label,
                                 uint16_t color, bool filled) {}
 
 void DisplayManager::updateControlState(bool shuffle, const char *repeatMode,
-                                        bool isLiked) {}
+                                        bool isLiked) {
+  // Always draw to ensure visibility after text clearing
+  drawLikeButton(isLiked);
+  _lastIsLiked = isLiked;
+}

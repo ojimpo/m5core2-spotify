@@ -41,10 +41,32 @@ bool SpotifyClient::likeTrack(const char *trackId) {
   return _spotify->save_tracks_for_current_user(1, ids).status_code == 200;
 }
 
+bool SpotifyClient::unlikeTrack(const char *trackId) {
+  const char *ids[] = {trackId};
+  return _spotify->remove_user_saved_tracks(1, ids).status_code == 200;
+}
+
+bool SpotifyClient::getLikeState(const char *trackId, bool &isLiked) {
+  const char *ids[] = {trackId};
+  response resp = _spotify->check_user_saved_tracks(1, ids);
+
+  // Debug output (commented out or use Serial if available)
+  // Serial.printf("Like Check: %d\n", resp.status_code);
+
+  if (resp.status_code == 200) {
+    JsonDocument &doc = resp.reply;
+    if (doc.size() > 0) {
+      isLiked = doc[0].as<bool>();
+      return true; // Success
+    }
+  }
+  return false; // API Error or invalid response
+}
+
 int SpotifyClient::getNowPlaying(String &title, String &artist,
                                  String &albumName, String &albumArtUrl,
-                                 bool &isPlaying, int &progressMs,
-                                 int &durationMs) {
+                                 String &trackId, bool &isPlaying,
+                                 int &progressMs, int &durationMs) {
   // Use currently_playing() which returns a response object
   response resp = _spotify->currently_playing();
 
@@ -55,6 +77,7 @@ int SpotifyClient::getNowPlaying(String &title, String &artist,
     if (doc["item"].is<JsonObject>()) {
       JsonObject item = doc["item"];
       title = item["name"].as<String>();
+      trackId = item["id"].as<String>();
 
       // Artist
       JsonArray artists = item["artists"];

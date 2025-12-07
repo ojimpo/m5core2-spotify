@@ -19,12 +19,14 @@ public:
   bool toggleShuffle(bool state);
   bool setRepeatMode(const char *mode); // "track", "context", "off"
   bool likeTrack(const char *trackId);
+  bool unlikeTrack(const char *trackId);
+  bool getLikeState(const char *trackId, bool &isLiked);
 
   // Data Code
   // Returns true if data was successfully fetched and parsed
   int getNowPlaying(String &title, String &artist, String &albumName,
-                    String &albumArtUrl, bool &isPlaying, int &progressMs,
-                    int &durationMs);
+                    String &albumArtUrl, String &trackId, bool &isPlaying,
+                    int &progressMs, int &durationMs);
 
 private:
   Spotify *_spotify;
