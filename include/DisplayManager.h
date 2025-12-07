@@ -28,8 +28,8 @@ private:
   void drawControls(bool isPlaying);
 
   // Helpers
-  void drawButton(int x, int y, int w, int h, const char *label,
-                  uint16_t color);
+  void drawButton(int x, int y, int w, int h, const char *label, uint16_t color,
+                  bool filled = false);
 };
 
 #endif
