@@ -1,0 +1,9 @@
+.pio
+.vscode/.browserslistrc
+.vscode/c_cpp_properties.json
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+include/secrets.h
+misc/
+.DS_Store
