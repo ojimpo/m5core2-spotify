@@ -41,6 +41,48 @@
 3.  **書き込み**:
     - PlatformIOを使用して、ファームウェアをビルドしM5Stack Core2に書き込みます。
 
+## トラブルシューティング
+
+### Spotify Refresh Tokenの簡単な取得方法
+
+手動でトークンを取得するのが難しい場合は、以下のWebツールを使用できます：
+
+**https://spotify-refresh-token-generator.netlify.app/**
+
+このツールを使用する場合：
+1. Spotify Developer Dashboardで、リダイレクトURIに `https://spotify-refresh-token-generator.netlify.app/callback` を追加してください
+2. 上記URLにアクセスし、必要なスコープを選択（すべて選択を推奨）
+3. Client IDとClient Secretを入力
+4. 生成されたRefresh Tokenを `secrets.h` にコピー
+
+### PlatformIOで書き込みができない場合
+
+PlatformIOが使用できない、またはエラーが発生する場合の代替方法：
+
+**Arduino IDEを使用する方法:**
+
+1. Arduino IDEをインストール
+2. ボードマネージャーで「ESP32」を検索してインストール
+3. ライブラリマネージャーで以下をインストール：
+   - M5Unified
+   - SpotifyEsp32
+   - ArduinoJson
+4. ボード設定：
+   - ボード: "M5Stack-Core2"
+   - Upload Speed: 115200
+   - Flash Frequency: 80MHz
+5. `src/main.cpp` を開いて書き込み
+
+**esptool.pyを使用する方法（上級者向け）:**
+
+```bash
+# PlatformIOでビルドのみ実行
+pio run
+
+# 生成されたバイナリを手動で書き込み
+esptool.py --chip esp32 --port /dev/cu.usbserial-XXXX write_flash 0x10000 .pio/build/m5stack-core2/firmware.bin
+```
+
 ## クレジット
 
 このプロジェクトは、Google DeepMindの **Antigravity** (Powered by **Gemini**) によって作成されました。
@@ -89,6 +131,48 @@ This project transforms your M5Stack Core2 into a dedicated Spotify remote contr
       ```
 3.  **Build & Flash**:
     - Use PlatformIO to build and upload the firmware to your M5Stack Core2.
+
+## Troubleshooting
+
+### Easy Way to Get Spotify Refresh Token
+
+If manual token generation is difficult, you can use this web tool:
+
+**https://spotify-refresh-token-generator.netlify.app/**
+
+When using this tool:
+1. Add `https://spotify-refresh-token-generator.netlify.app/callback` to your Redirect URIs in Spotify Developer Dashboard
+2. Visit the URL above and select required scopes (recommend selecting all)
+3. Enter your Client ID and Client Secret
+4. Copy the generated Refresh Token to `secrets.h`
+
+### Alternative Upload Methods if PlatformIO Fails
+
+If PlatformIO doesn't work or encounters errors:
+
+**Using Arduino IDE:**
+
+1. Install Arduino IDE
+2. Install "ESP32" from Board Manager
+3. Install the following libraries from Library Manager:
+   - M5Unified
+   - SpotifyEsp32
+   - ArduinoJson
+4. Board settings:
+   - Board: "M5Stack-Core2"
+   - Upload Speed: 115200
+   - Flash Frequency: 80MHz
+5. Open `src/main.cpp` and upload
+
+**Using esptool.py (Advanced):**
+
+```bash
+# Build only with PlatformIO
+pio run
+
+# Manually flash the generated binary
+esptool.py --chip esp32 --port /dev/cu.usbserial-XXXX write_flash 0x10000 .pio/build/m5stack-core2/firmware.bin
+```
 
 ## Credits
 
