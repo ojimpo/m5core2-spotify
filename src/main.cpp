@@ -45,12 +45,37 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   int dotCount = 0;
-  while (WiFi.status() != WL_CONNECTED) {
+  int maxAttempts = 20; // 10 seconds timeout
+  while (WiFi.status() != WL_CONNECTED && dotCount < maxAttempts) {
     delay(500);
     dotCount++;
-    if (dotCount > 10) {
+    if (dotCount % 10 == 0) {
       displayMsg.showLoading("WiFi Connecting...");
-      dotCount = 0;
+    }
+  }
+
+  // If first WiFi failed and second WiFi is configured, try it
+  if (WiFi.status() != WL_CONNECTED && strlen(WIFI_SSID_2) > 0) {
+    displayMsg.showLoading("Trying WiFi 2...");
+    WiFi.disconnect();
+    delay(100);
+    WiFi.begin(WIFI_SSID_2, WIFI_PASSWORD_2);
+
+    dotCount = 0;
+    while (WiFi.status() != WL_CONNECTED && dotCount < maxAttempts) {
+      delay(500);
+      dotCount++;
+      if (dotCount % 10 == 0) {
+        displayMsg.showLoading("WiFi 2 Connecting...");
+      }
+    }
+  }
+
+  // Check if connected
+  if (WiFi.status() != WL_CONNECTED) {
+    displayMsg.showError("WiFi Failed!");
+    while (true) {
+      delay(1000);
     }
   }
 
