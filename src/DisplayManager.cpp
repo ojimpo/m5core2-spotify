@@ -59,7 +59,7 @@ void DisplayManager::updatePlaybackState(bool isPlaying, int progress,
   }
 
   // Draw Progress Bar
-  int barY = 180;
+  int barY = 186; // Below 180px artwork + padding
   int barHeight = 4;
   int screenW = M5.Display.width();
 
@@ -81,11 +81,11 @@ void DisplayManager::drawAlbumArt(String url) {
   int httpCode = http.GET();
   if (httpCode == HTTP_CODE_OK) {
     // Clear the artwork area
-    M5.Display.fillRect(10, 30, 150, 150, TFT_BLACK);
+    M5.Display.fillRect(0, 0, 180, 180, TFT_BLACK);
 
     WiFiClient *stream = http.getStreamPtr();
-    // Use jpeg_div_2 to scale 300x300 down to 150x150
-    M5.Display.drawJpg(stream, 10, 30, 0, 0, 0, 0, jpeg_div_t::JPEG_DIV_2);
+    // Scale 300x300 -> 180x180 (scale 0.6)
+    M5.Display.drawJpg(stream, 0, 0, 0, 0, 0, 0, 0.6f);
   }
   http.end();
 }
@@ -94,7 +94,7 @@ void DisplayManager::drawAlbumArt(String url) {
 void drawIcon(int x, int y, int type, uint16_t color) {
   // type: 0=Prev, 1=Play, 2=Pause, 3=Next
   M5.Display.setColor(color);
-  int size = 12; // Base size for icons
+  int size = 9; // Reduced size (3/4 of 12)
 
   if (type == 0) { // Prev (|<< like, but simplified to |<)
     // Bar
@@ -120,93 +120,149 @@ void drawIcon(int x, int y, int type, uint16_t color) {
 }
 
 void DisplayManager::drawTextInfo(String title, String artist) {
-  // Clear text area
-  M5.Display.fillRect(160, 30, 160, 150, TFT_BLACK);
-  M5.Display.setClipRect(160, 30, 160, 150);
+  // Clear text area (X=180 to 320, Y=0 to 180)
+  M5.Display.fillRect(180, 0, 140, 180, TFT_BLACK);
+  M5.Display.setClipRect(180, 0, 140, 180);
 
-  int startY = 40;
-  int startX = 170;
+  // Layout calculations
+  // Artwork 180px. Center Y = 90.
+  // Block Height = 52px.
+  // Start Y = 90 - 26 = 64.
+
+  int startX = 186; // +6px margin
+  int startY = 64;
 
   M5.Display.setCursor(startX, startY);
 
-  // Title: Large, White
-  // Scale usually helps but lgfx fonts are bitmaps mostly.
-  // Let's try 16px scaled 1.2 or just 16px. User wanted Title > Artist.
-  // We'll keep Title 16px standard, and make Artist smaller (0.8).
-  M5.Display.setFont(&fonts::lgfxJapanGothicP_16);
-  M5.Display.setTextSize(1.2);
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.Display.println(title);
-
-  // Artist: Smaller, Grey
-  // Reduce gap: Get current Y.
-  int artistY = M5.Display.getCursorY();
-  // Ensure minimal gap but not huge
-  if (artistY < startY + 24)
-    artistY = startY + 24;
-
-  M5.Display.setCursor(startX, artistY);
-  M5.Display.setTextSize(0.9); // Slightly smaller
-  M5.Display.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-  M5.Display.println(artist);
-
-  // Reset
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+  // Title: 20px, White, Prominent
+  M5.Display.setFont(&fonts::lgfxJapanGothicP_20);
   M5.Display.setTextSize(1.0);
+  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+
+  // Manual Wrapping for Title
+  int maxWidth = 135; // Increased slightly due to reduced margin
+  M5.Display.setTextWrap(false);
+
+  if (M5.Display.textWidth(title) > maxWidth) {
+    String line1 = "";
+    String line2 = "";
+    int len = title.length();
+
+    for (int i = 0; i < len;) {
+      int charLen = 1;
+      unsigned char c = title[i];
+      if (c >= 0xF0)
+        charLen = 4;
+      else if (c >= 0xE0)
+        charLen = 3;
+      else if (c >= 0xC0)
+        charLen = 2;
+
+      String temp = title.substring(0, i + charLen);
+      if (M5.Display.textWidth(temp) > maxWidth) {
+        line1 = title.substring(0, i);
+        line2 = title.substring(i);
+        break;
+      }
+      i += charLen;
+      if (i >= len) {
+        line1 = title;
+        line2 = "";
+      }
+    }
+
+    int adjustedY = startY - 12;
+    M5.Display.setCursor(startX, adjustedY);
+
+    M5.Display.println(line1);
+    M5.Display.setCursor(startX, M5.Display.getCursorY());
+    M5.Display.println(line2);
+  } else {
+    M5.Display.setCursor(startX, startY);
+    M5.Display.println(title);
+  }
+
+  // Gap
+  int cursorY = M5.Display.getCursorY() + 8;
+  M5.Display.setCursor(startX, cursorY);
+
+  // Artist: 16px, Grey
+  M5.Display.setFont(&fonts::lgfxJapanGothicP_16);
+  M5.Display.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+
+  // Manual Wrapping for Artist
+  if (M5.Display.textWidth(artist) > maxWidth) {
+    String line1 = "";
+    String line2 = "";
+    int len = artist.length();
+
+    for (int i = 0; i < len;) {
+      int charLen = 1;
+      unsigned char c = artist[i];
+      if (c >= 0xF0)
+        charLen = 4;
+      else if (c >= 0xE0)
+        charLen = 3;
+      else if (c >= 0xC0)
+        charLen = 2;
+
+      String temp = artist.substring(0, i + charLen);
+      if (M5.Display.textWidth(temp) > maxWidth) {
+        line1 = artist.substring(0, i);
+        line2 = artist.substring(i);
+        break;
+      }
+      i += charLen;
+      if (i >= len) {
+        line1 = artist;
+        line2 = "";
+      }
+    }
+    M5.Display.println(line1);
+    M5.Display.setCursor(startX, M5.Display.getCursorY());
+    M5.Display.println(line2);
+  } else {
+    M5.Display.println(artist);
+  }
+
+  M5.Display.setTextWrap(true);
+  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
   M5.Display.clearClipRect();
 }
 
 void DisplayManager::drawControls(bool isPlaying) {
-  // Draw Control Area background
-  int btnY = 190; // Moved up from 200 to correct circle cut-off (200+25+offset
-                  // > 240) 190 Center of buttons? No, buttons are height 40?
-                  // Let's decide a center Y relative to bottom.
-                  // Screen 240. Bottom section height ~60. Center ~210.
-                  // If we use Y=190 as top-left of button rect, center is 210.
-                  // Circle radius 25 -> 210+25=235. Fits.
-
-  int centerY = 210;
+  int centerY = 216; // Lower position (Bottom 240, R=19, Pad=5 -> 240-24=216)
 
   // Prev Button (Center ~ 60)
-  // Clear area
-  M5.Display.fillRect(40, centerY - 20, 40, 40, TFT_BLACK);
-  drawIcon(60, centerY, 0, TFT_WHITE); // Type 0 = Prev
+  // Clear area (Reduced)
+  M5.Display.fillRect(45, centerY - 15, 30, 30, TFT_BLACK);
+  drawIcon(60, centerY, 0, TFT_WHITE);
 
   // Play/Pause - Special Circular Button (Center 160)
   int ppX = 160;
-  int ppR = 25;
+  int ppR = 19; // Reduced from 25 (approx 3/4)
 
-  // Clear area (larger for circle)
-  M5.Display.fillRect(130, centerY - 30, 60, 60, TFT_BLACK);
+  // Clear area (Reduced)
+  M5.Display.fillRect(135, centerY - 25, 50, 50, TFT_BLACK);
 
   // Draw White Circle
   M5.Display.fillCircle(ppX, centerY, ppR, TFT_WHITE);
 
   // Draw Icon
   if (isPlaying) {
-    drawIcon(ppX, centerY, 2, TFT_BLACK); // Pause
+    drawIcon(ppX, centerY, 2, TFT_BLACK);
   } else {
-    drawIcon(ppX, centerY, 1, TFT_BLACK); // Play
+    drawIcon(ppX, centerY, 1, TFT_BLACK);
   }
 
   // Next Button (Center ~ 260)
-  // Clear area
-  M5.Display.fillRect(240, centerY - 20, 40, 40, TFT_BLACK);
-  drawIcon(260, centerY, 3, TFT_WHITE); // Type 3 = Next
+  // Clear area (Reduced)
+  M5.Display.fillRect(245, centerY - 15, 30, 30, TFT_BLACK);
+  drawIcon(260, centerY, 3, TFT_WHITE);
 }
 
 void DisplayManager::drawButton(int x, int y, int w, int h, const char *label,
-                                uint16_t color, bool filled) {
-  // Legacy drawButton (still used by logic? No, we replaced calls in
-  // drawControls) Leaving empty or simple just in case, or removing if
-  // possible. Code might call it elsewhere? No, only drawControls used it. But
-  // updating header signatures usually unsafe if we don't update
-  // implementation. We'll keep it but it might be unused by drawControls now.
-  // Or we can assume this function is dead code for controls but maybe useful
-  // later.
-}
+                                uint16_t color, bool filled) {}
 
 void DisplayManager::updateControlState(bool shuffle, const char *repeatMode,
-                                        bool isLiked) {
-  // Optional indicators
-}
+                                        bool isLiked) {}
